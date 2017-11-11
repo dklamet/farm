@@ -45,10 +45,12 @@ class CANMessage: public Message
 };
 
 
-class CANStat
+class CANStats
 {
     unordered_map<time_t, unsigned int> mCANTimeMap; //[time, messagecount]
     unordered_map<unsigned int,unsigned int>mCANCount;   //[message_id, message_count]
+
+    public:
 
     bool existsMsgID(unsigned int msgid)
     {
@@ -82,8 +84,18 @@ class CANStat
        {
            mCANTimeMap[tstamp]++;
        }
+    }
 
-   }
+
+    unsigned int getMessageCount(time_t tstamp)
+    {
+
+        if (existsTime(tstamp))
+        {
+            return mCANTimeMap[tstamp];
+        }
+        return 0;
+    }
 };
 
 enum FIELD_INDEX
@@ -102,7 +114,7 @@ enum FIELD_INDEX
 
 
 
-class StatData
+class StatData: public CANStats
 {
     const int MAX_FIELD_COUNT=10;   //Fields greater than this are ignored 
     const int MAX_FIELD_SIZE=30;    //Assumption based on sample data
@@ -112,7 +124,6 @@ class StatData
     unsigned int mCANCount;         //Number of parsed CAN messages
     unsigned int mUniqueCANCount;   //Unique CAN messages
     unsigned int mGPSCount;         //Number of parsed GPS messages
-
 
     public:
 
@@ -155,39 +166,40 @@ class StatData
     void addEntry(string line)
     {
         string fields[MAX_FIELD_COUNT];
-
+        time_t t_epoch;
         parseFields(line,fields);
 
+        t_epoch=0;
         if (fields[TIMESTAMP].length())
         {
             struct tm timestamp;
             strptime(fields[TIMESTAMP].c_str(),"%Y-%m-%d %T",&timestamp);
-            time_t t=mktime(&timestamp);
-            printf("%lld:\n",t);
+            t_epoch=mktime(&timestamp);
+            printf("%lld:\n",t_epoch);
             if (!mStartTime)
             {
-                mStartTime=t;
+                mStartTime=t_epoch;
             }
-            mEndTime=t;         //This is the last time if we don't get another entry
+            mEndTime=t_epoch;         //This is the last time if we don't get another entry
         }
         else
         {
             printf("No timestamp: %s\n",line.c_str());
+            return; //Ignore
         }
 
         //Assume data is either GPS or CAN and no invalid entriesl
         if (fields[MESSAGE_ID].length()) //Discriminant.  First field is empty=GPS, otherwise CAN
         {
             printf("CAN:%s\n",line.c_str());
-            mGPSCount++;
+            mCANCount++;
+            addMsgID(strtoul(fields[MESSAGE_ID].c_str(),NULL,16),t_epoch);
         }
         else
         {
             printf("GPS:%s\n",line.c_str());
-            mCANCount++;
-
+            mGPSCount++;
         }
-
     }
 
     time_t getStartTime(void)
