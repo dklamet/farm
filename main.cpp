@@ -191,9 +191,16 @@ class StatData: public CANStats
         //Assume data is either GPS or CAN and no invalid entriesl
         if (fields[MESSAGE_ID].length()) //Discriminant.  First field is empty=GPS, otherwise CAN
         {
+            unsigned int msgid=strtoul(fields[MESSAGE_ID].c_str(),NULL,16);
             printf("CAN:%s\n",line.c_str());
             mCANCount++;
-            addMsgID(strtoul(fields[MESSAGE_ID].c_str(),NULL,16),t_epoch);
+
+            if (!existsMsgID(msgid))
+            {
+                mUniqueCANCount++;
+            }
+
+            addMsgID(msgid,t_epoch);
         }
         else
         {
@@ -202,10 +209,6 @@ class StatData: public CANStats
         }
     }
 
-    time_t getStartTime(void)
-    {
-        return mStartTime;
-    }
     unsigned int getCANCount(void)
     {
         return mCANCount;
@@ -214,6 +217,19 @@ class StatData: public CANStats
     {
         return mGPSCount;
     }
+
+
+    time_t getStartTime(void)
+    {
+        return mStartTime;
+    }
+
+
+    time_t getEndTime(void)
+    {
+        return mEndTime;
+    }
+
 
 };
 
