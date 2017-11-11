@@ -45,6 +45,47 @@ class CANMessage: public Message
 };
 
 
+class CANStat
+{
+    unordered_map<time_t, unsigned int> mCANTimeMap; //[time, messagecount]
+    unordered_map<unsigned int,unsigned int>mCANCount;   //[message_id, message_count]
+
+    bool existsMsgID(unsigned int msgid)
+    {
+        if(mCANCount.find(msgid) == mCANCount.end())
+        {
+            return false;
+        }
+        return true;
+    }
+
+    bool existsTime(time_t tstamp)
+    {
+        if(mCANTimeMap.find(tstamp) == mCANTimeMap.end())
+        {
+            return false;
+        }
+        return true;
+    }
+
+
+   //If the msgid does not exist, create an entry with a count of 1
+   //otherwise, increment the count for that msgid
+   void addMsgID(unsigned int msgid,time_t tstamp)
+   {
+       if (existsMsgID(msgid))
+       {
+           mCANCount[msgid]++;
+       }
+
+       if(existsTime(tstamp))
+       {
+           mCANTimeMap[tstamp]++;
+       }
+
+   }
+};
+
 enum FIELD_INDEX
 {
     MESSAGE_ID,
@@ -72,8 +113,6 @@ class StatData
     unsigned int mUniqueCANCount;   //Unique CAN messages
     unsigned int mGPSCount;         //Number of parsed GPS messages
 
-    unordered_map<unsigned int,time_t> mCANmap;
-
 
     public:
 
@@ -81,16 +120,14 @@ class StatData
     StatData(void)
     {
         mStartTime=0;
+        mCANCount=0;
+        mUniqueCANCount=0;
+        mGPSCount=0;
     }
 
 
-    void parsefields(string line, string fields[])
+    void parseFields(string line, string fields[])
     {
-    }
-
-    void addEntry(string line)
-    {
-        string fields[MAX_FIELD_COUNT];
 
         typedef boost::tokenizer<boost::escaped_list_separator<char>> tokenizer;
         tokenizer t{line};
@@ -113,6 +150,13 @@ class StatData
 
             i++;
         }
+    }
+
+    void addEntry(string line)
+    {
+        string fields[MAX_FIELD_COUNT];
+
+        parseFields(line,fields);
 
         if (fields[TIMESTAMP].length())
         {
@@ -158,10 +202,6 @@ class StatData
     {
         return mGPSCount;
     }
-
-
-
-
 
 };
 
