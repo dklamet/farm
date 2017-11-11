@@ -1,0 +1,197 @@
+///\file main.cpp
+///\brief FarMobile programming test main module
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <stdlib.h>
+#include <boost/tokenizer.hpp>
+#include <time.h>
+#include <unordered_map>
+using namespace std;
+using namespace boost;
+
+//Trim string. Simplest solution found on Google.
+//Wheel not re-invented
+string trim(string instring)
+{
+    size_t startpos = instring.find_first_not_of(" \t");
+    size_t endpos = instring.find_last_not_of(" \t");
+    string str = instring.substr( startpos, endpos-startpos+1 );
+    return str;
+}
+
+
+
+
+class Message
+{
+    public:
+    enum MessageType {GPS,CAN} mMessageType;
+    
+
+};
+
+
+class GPSMessage: public Message
+{
+
+};
+
+class CANMessage: public Message
+{
+
+
+};
+
+
+enum FIELD_INDEX
+{
+    MESSAGE_ID,
+    DLC,
+    PAYLOAD,
+    PUC_ID,
+    TIMESTAMP,
+    GPS_ID,
+    LATITUDE,
+    LONGITUDE,
+    GROUNDSPEED,
+    TRUECOURSE
+};    
+
+
+
+class StatData
+{
+    const int MAX_FIELD_COUNT=10;   //Fields greater than this are ignored 
+    const int MAX_FIELD_SIZE=30;    //Assumption based on sample data
+    time_t mStartTime;
+    time_t mEndTime;
+
+    unsigned int mCANCount;         //Number of parsed CAN messages
+    unsigned int mUniqueCANCount;   //Unique CAN messages
+    unsigned int mGPSCount;         //Number of parsed GPS messages
+
+    unordered_map<unsigned int,time_t> mCANmap;
+
+
+    public:
+
+
+    StatData(void)
+    {
+        mStartTime=0;
+    }
+
+
+    void parsefields(string line, string fields[])
+    {
+    }
+
+    void addEntry(string line)
+    {
+        string fields[MAX_FIELD_COUNT];
+
+        typedef boost::tokenizer<boost::escaped_list_separator<char>> tokenizer;
+        tokenizer t{line};
+
+        //Fill array with pointers to fields for convience
+        int i=0;
+        for (tokenizer::iterator iter=t.begin();iter != t.end(); ++iter)
+        {
+            if (MAX_FIELD_COUNT == i)
+            {
+                printf("Entry greater than %d fields\n",MAX_FIELD_COUNT);
+                break;
+            }
+            const char *str=iter->c_str();
+            if (*str) //String not empty
+            {
+                printf("%s\n",iter->c_str());
+                fields[i]=trim(iter->c_str());
+            }
+
+            i++;
+        }
+
+        if (fields[TIMESTAMP].length())
+        {
+            struct tm timestamp;
+            strptime(fields[TIMESTAMP].c_str(),"%Y-%m-%d %T",&timestamp);
+            time_t t=mktime(&timestamp);
+            printf("%lld:\n",t);
+            if (!mStartTime)
+            {
+                mStartTime=t;
+            }
+            mEndTime=t;         //This is the last time if we don't get another entry
+        }
+        else
+        {
+            printf("No timestamp: %s\n",line.c_str());
+        }
+
+        //Assume data is either GPS or CAN and no invalid entriesl
+        if (fields[MESSAGE_ID].length()) //Discriminant.  First field is empty=GPS, otherwise CAN
+        {
+            printf("CAN:%s\n",line.c_str());
+            mGPSCount++;
+        }
+        else
+        {
+            printf("GPS:%s\n",line.c_str());
+            mCANCount++;
+
+        }
+
+    }
+
+    time_t getStartTime(void)
+    {
+        return mStartTime;
+    }
+    unsigned int getCANCount(void)
+    {
+        return mCANCount;
+    }
+    unsigned int getGPSount(void)
+    {
+        return mGPSCount;
+    }
+
+
+
+
+
+};
+
+
+
+int main(int argc, char** argv)
+{
+    string filename = "gps_can_data.csv";
+    string line;
+    ifstream infile;
+
+    StatData sd;
+
+    infile.open(filename);
+    if (infile.fail())
+    {
+        cout <<"Unable to open" << filename << endl;
+        exit(0);
+    }
+
+    //Assume there is at least one line, don't check for EOF yet
+    //And throw away field labels
+    getline(infile,line);
+    while (!infile.eof())
+    {
+        getline(infile,line);
+        sd.addEntry(line);
+    }
+
+    printf("\n");
+    
+
+}
