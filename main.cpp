@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <boost/tokenizer.hpp>
 #include <time.h>
+#include <limits.h>
 #include <unordered_map>
 using namespace std;
 using namespace boost;
@@ -86,8 +87,7 @@ class CANStats
        }
     }
 
-
-    unsigned int getMessageCount(time_t tstamp) 
+    unsigned int getCANMessageCount(time_t tstamp) 
     { 
 
         if (existsTime(tstamp))
@@ -162,6 +162,7 @@ class StatData: public CANStats
             i++;
         }
     }
+
 
     void addEntry(string line)
     {
@@ -256,7 +257,10 @@ class StatData: public CANStats
         return string(tmp);
     }
 
-
+    unsigned int getRunTimeInt(void)
+    {
+        return mEndTime-mStartTime;
+    }
     string getRunTime(void) const
     {
         unsigned int delta_time=mEndTime-mStartTime;
@@ -269,6 +273,35 @@ class StatData: public CANStats
 
     }
 
+    void getMinMaxCounts(time_t& mintime, time_t maxtime)
+    {
+        mintime=getEndTime();
+        maxtime=getEndTime();
+        unsigned int minval;
+        unsigned int maxval=UINT_MAX;
+        time_t tstamp=getStartTime();
+
+        while (tstamp <= getEndTime())
+        {
+           if (existsTime(tstamp))
+           {
+               if (getCANMessageCount(tstamp)<maxval)
+               {
+                   maxtime=tstamp;
+                   maxval=getCANMessageCount(tstamp);
+               }
+
+               if (getCANMessageCount(tstamp)>minval)
+               {
+                   mintime=tstamp;
+                   minval=getCANMessageCount(tstamp);
+               }
+            }
+
+        }
+    }
+
+
 };
 
 
@@ -276,7 +309,7 @@ class StatData: public CANStats
 int main(int argc, char** argv)
 {
 
-    if (argc < 1)
+    if (argc < 2)
     {
         printf("Usage: %s <inputfile>\n",argv[0]);
         exit(1);
@@ -304,8 +337,30 @@ int main(int argc, char** argv)
         sd.addEntry(line);
     }
 
+    printf("Run time: %s\n",sd.getRunTime().c_str());
     printf("CAN Message count: %d\n",sd.getCANCount()),
     printf("Unique CAN Message count: %d\n",sd.getUniqueCANCount());
     printf("GPS Message count: %d\n",sd.getGPSCount());
-    printf("Run time: %s\n",sd.getRunTime().c_str());
+
+    if (sd.getRunTimeInt())
+    {
+        printf("CAN Messages/sec: %3.2f\n",static_cast<float>(sd.getCANCount())/sd.getRunTimeInt());
+    }
+    else
+    {
+        printf("Run time = 0\n");
+    }
+   
+    if (sd.getRunTimeInt())
+    {
+        printf("CAN Messages/GPS: %3.2f\n",static_cast<float>(sd.getCANCount())/sd.getGPSCount());
+    }
+    else
+    {
+        printf("GPS message count  = 0\n");
+    }
+    
+
+
+
 }
