@@ -52,7 +52,7 @@ class CANStats
 
     public:
 
-    bool existsMsgID(unsigned int msgid)
+    bool existsMsgID(unsigned int msgid) const
     {
         if(mCANCount.find(msgid) == mCANCount.end())
         {
@@ -61,7 +61,7 @@ class CANStats
         return true;
     }
 
-    bool existsTime(time_t tstamp)
+    bool existsTime(time_t tstamp) const
     {
         if(mCANTimeMap.find(tstamp) == mCANTimeMap.end())
         {
@@ -87,8 +87,8 @@ class CANStats
     }
 
 
-    unsigned int getMessageCount(time_t tstamp)
-    {
+    unsigned int getMessageCount(time_t tstamp) 
+    { 
 
         if (existsTime(tstamp))
         {
@@ -155,7 +155,7 @@ class StatData: public CANStats
             const char *str=iter->c_str();
             if (*str) //String not empty
             {
-                printf("%s\n",iter->c_str());
+                //printf("%s\n",iter->c_str());
                 fields[i]=trim(iter->c_str());
             }
 
@@ -175,7 +175,7 @@ class StatData: public CANStats
             struct tm timestamp;
             strptime(fields[TIMESTAMP].c_str(),"%Y-%m-%d %T",&timestamp);
             t_epoch=mktime(&timestamp);
-            printf("%lld:\n",t_epoch);
+            //printf("%lld:\n",t_epoch);
             if (!mStartTime)
             {
                 mStartTime=t_epoch;
@@ -192,7 +192,7 @@ class StatData: public CANStats
         if (fields[MESSAGE_ID].length()) //Discriminant.  First field is empty=GPS, otherwise CAN
         {
             unsigned int msgid=strtoul(fields[MESSAGE_ID].c_str(),NULL,16);
-            printf("CAN:%s\n",line.c_str());
+            //printf("CAN:%s\n",line.c_str());
             mCANCount++;
 
             if (!existsMsgID(msgid))
@@ -204,32 +204,70 @@ class StatData: public CANStats
         }
         else
         {
-            printf("GPS:%s\n",line.c_str());
+            //printf("GPS:%s\n",line.c_str());
             mGPSCount++;
         }
     }
 
-    unsigned int getCANCount(void)
+    unsigned int getCANCount(void) const
     {
         return mCANCount;
     }
-    unsigned int getGPSount(void)
+    
+    unsigned int getUniqueCANCount(void) const
+    {
+        return mUniqueCANCount;
+    }
+
+
+    unsigned int getGPSCount(void) const
     {
         return mGPSCount;
     }
 
 
-    time_t getStartTime(void)
+    time_t getStartTime(void) const
     {
         return mStartTime;
     }
 
 
-    time_t getEndTime(void)
+    time_t getEndTime(void) const
     {
         return mEndTime;
     }
+    
+    string getEndTimeString(void) const
+    {
+        struct tm etime;
+        char tmp[50];
+        gmtime_r(&mEndTime,&etime);
+        strftime(tmp,50,"%Y-%m-%d %T",&etime);
 
+        return string(tmp);
+    }
+
+    string getStartTimeString(void) const
+    {
+        struct tm etime;
+        char tmp[50];
+        gmtime_r(&mStartTime,&etime);
+        strftime(tmp,50,"%Y-%m-%d %T",&etime);
+        return string(tmp);
+    }
+
+
+    string getRunTime(void) const
+    {
+        unsigned int delta_time=mEndTime-mStartTime;
+        char str[50];
+
+        //Quick conversion to delta time HH:MM:SS (No support for days)
+        snprintf(str,50,"%02d:%02d:%02d",delta_time/3600, (delta_time%3600)/60,(delta_time%3600)%60);
+
+        return string(str);
+
+    }
 
 };
 
@@ -237,7 +275,14 @@ class StatData: public CANStats
 
 int main(int argc, char** argv)
 {
-    string filename = "gps_can_data.csv";
+
+    if (argc < 1)
+    {
+        printf("Usage: %s <inputfile>\n",argv[0]);
+        exit(1);
+    }
+    string filename = argv[1];
+
     string line;
     ifstream infile;
 
@@ -259,7 +304,8 @@ int main(int argc, char** argv)
         sd.addEntry(line);
     }
 
-    printf("\n");
-    
-
+    printf("CAN Message count: %d\n",sd.getCANCount()),
+    printf("Unique CAN Message count: %d\n",sd.getUniqueCANCount());
+    printf("GPS Message count: %d\n",sd.getGPSCount());
+    printf("Run time: %s\n",sd.getRunTime().c_str());
 }
