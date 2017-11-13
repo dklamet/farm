@@ -24,7 +24,7 @@ string trim(string instring)
 
 
 
-void time_tToStruct_tm(time_t timet,struct tm strcttm)
+void time_tToStruct_tm(time_t timet,struct tm& strcttm)
 {
     gmtime_r(&timet, &strcttm);
 }
@@ -35,7 +35,7 @@ string timeString(time_t timet)
     char str[50];
     time_tToStruct_tm(timet,strcttm);
 
-    strftime(str,50,"Y-%m-%d %T",&strcttm);
+    strftime(str,50,"%Y-%m-%d %T",&strcttm);
     return string(str);
 }
 
@@ -67,7 +67,7 @@ class CANStats
 
    //If the msgid does not exist, create an entry with a count of 1
    //otherwise, increment the count for that msgid
-   void addMsgID(unsigned int msgid,time_t tstamp)
+   void addMessage(unsigned int msgid,time_t tstamp)
    {
        if (existsMsgID(msgid))
        {
@@ -77,6 +77,10 @@ class CANStats
        if(existsTime(tstamp))
        {
            mCANTimeMap[tstamp]++;
+       }
+       else
+       {
+           mCANTimeMap[tstamp]=1;
        }
     }
 
@@ -194,7 +198,7 @@ class StatData: public CANStats
                 mUniqueCANCount++;
             }
 
-            addMsgID(msgid,t_epoch);
+            addMessage(msgid,t_epoch);
         }
         else
         {
@@ -266,7 +270,7 @@ class StatData: public CANStats
 
     }
 
-    void getMinMaxCounts(time_t& mintime, time_t maxtime)
+    void getMinMaxCounts(time_t& mintime, time_t& maxtime)
     {
         mintime=getEndTime();
         maxtime=getEndTime();
@@ -290,7 +294,7 @@ class StatData: public CANStats
                    minval=getCANMessageCount(tstamp);
                }
             }
-
+            tstamp++;
         }
     }
 };
@@ -332,7 +336,15 @@ int main(int argc, char** argv)
     printf("CAN Message count: %d\n",sd.getCANCount()),
     printf("Unique CAN Message count: %d\n",sd.getUniqueCANCount());
     printf("GPS Message count: %d\n",sd.getGPSCount());
+    {
+        time_t mintime = 0;
+        time_t maxtime = 0;
+        sd.getMinMaxCounts(mintime, maxtime);
+        printf("Minimum messages at %s\n",timeString(mintime).c_str());
+        printf("Maximum messages at %s\n",timeString(maxtime).c_str());
+    }
 
+    
     if (sd.getRunTimeInt())
     {
         printf("CAN Messages/sec: %3.2f\n",static_cast<float>(sd.getCANCount())/sd.getRunTimeInt());
