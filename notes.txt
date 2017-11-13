@@ -1,4 +1,4 @@
-1a.  Correctness of (simple) counts of GPS can be verified with the provided counts.sh script
+1a.  Correctness of (simple) counts of GPS can be verified with the provided checkcounts.sh script
 1b.  That CAN messages/sec is almost the same as CAN messages/GPS message indicates that these are
     likely correct since GPS messages (in this data set) occur 1/sec.
 1c
