@@ -24,27 +24,20 @@ string trim(string instring)
 
 
 
-
-class Message
+void time_tToStruct_tm(time_t timet,struct tm strcttm)
 {
-    public:
-    enum MessageType {GPS,CAN} mMessageType;
-    
+    gmtime_r(&timet, &strcttm);
+}
 
-};
-
-
-class GPSMessage: public Message
+string timeString(time_t timet)
 {
+    struct tm strcttm;
+    char str[50];
+    time_tToStruct_tm(timet,strcttm);
 
-};
-
-class CANMessage: public Message
-{
-
-
-};
-
+    strftime(str,50,"Y-%m-%d %T",&strcttm);
+    return string(str);
+}
 
 class CANStats
 {
@@ -300,8 +293,6 @@ class StatData: public CANStats
 
         }
     }
-
-
 };
 
 
